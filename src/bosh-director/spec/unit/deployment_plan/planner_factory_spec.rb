@@ -7,13 +7,13 @@ module Bosh
         subject { PlannerFactory.new(deployment_manifest_migrator, manifest_validator, deployment_repo, logger) }
         let(:deployment_repo) { DeploymentRepo.new }
         let(:deployment_name) { 'simple' }
-        let(:manifest_hash) { Bosh::Spec::Deployments.simple_manifest }
+        let(:manifest_hash) { Bosh::Spec::NewDeployments.simple_manifest_with_instance_groups }
         let(:deployment_manifest_migrator) { instance_double(ManifestMigrator) }
         let(:manifest_validator) { Bosh::Director::DeploymentPlan::ManifestValidator.new }
         let(:cloud_configs) { [Models::Config.make(:cloud, content: YAML.dump(cloud_config_hash))] }
         let(:runtime_config_models) { [instance_double(Bosh::Director::Models::Config)] }
         let(:runtime_config_consolidator) { instance_double(Bosh::Director::RuntimeConfig::RuntimeConfigsConsolidator) }
-        let(:cloud_config_hash) { Bosh::Spec::Deployments.simple_cloud_config }
+        let(:cloud_config_hash) { Bosh::Spec::NewDeployments.simple_cloud_config }
         let(:runtime_config_hash) { Bosh::Spec::Deployments.simple_runtime_config }
         let(:manifest_with_config_keys) { Bosh::Spec::Deployments.simple_manifest.merge('name' => 'with_keys') }
         let(:manifest) { Manifest.new(manifest_hash, YAML.dump(manifest_hash), cloud_config_hash, runtime_config_hash) }
@@ -102,11 +102,11 @@ module Bosh
             planner
             expected_deployment_manifest_log = <<~LOGMESSAGE
               Migrated deployment manifest:
-              {"name"=>"migrated_name", "director_uuid"=>"deadbeef", "releases"=>[{"name"=>"bosh-release", "version"=>"0.1-dev"}], "update"=>{"canaries"=>2, "canary_watch_time"=>4000, "max_in_flight"=>1, "update_watch_time"=>20}, "jobs"=>[{"name"=>"foobar", "templates"=>[{"name"=>"foobar"}], "resource_pool"=>"a", "instances"=>3, "networks"=>[{"name"=>"a"}], "properties"=>{}}]}
+              {"name"=>"migrated_name", "director_uuid"=>"deadbeef", "releases"=>[{"name"=>"bosh-release", "version"=>"0.1-dev"}], "stemcells"=>[{"name"=>"ubuntu-stemcell", "version"=>"1", "alias"=>"default"}], "update"=>{"canaries"=>2, "canary_watch_time"=>4000, "max_in_flight"=>1, "update_watch_time"=>20}, "instance_groups"=>[{"name"=>"foobar", "stemcell"=>"default", "vm_type"=>"a", "instances"=>3, "networks"=>[{"name"=>"a"}], "properties"=>{}, "jobs"=>[{"name"=>"foobar", "properties"=>{}}]}]}
 LOGMESSAGE
             expected_cloud_manifest_log = <<~LOGMESSAGE
               Migrated cloud config manifest:
-              {"networks"=>[{"name"=>"a", "subnets"=>[{"range"=>"192.168.1.0/24", "gateway"=>"192.168.1.1", "dns"=>["192.168.1.1", "192.168.1.2"], "static"=>["192.168.1.10"], "reserved"=>[], "cloud_properties"=>{}}]}], "compilation"=>{"workers"=>1, "network"=>"a", "cloud_properties"=>{}}, "resource_pools"=>[{"name"=>"a", "cloud_properties"=>{}, "stemcell"=>{"name"=>"ubuntu-stemcell", "version"=>"1"}, "env"=>{"bosh"=>{"password"=>"foobar"}}}]}
+              {"networks"=>[{"name"=>"a", "subnets"=>[{"range"=>"192.168.1.0/24", "gateway"=>"192.168.1.1", "dns"=>["192.168.1.1", "192.168.1.2"], "static"=>["192.168.1.10"], "reserved"=>[], "cloud_properties"=>{}}]}], "compilation"=>{"workers"=>1, "network"=>"a", "cloud_properties"=>{}}, "vm_types"=>[{"name"=>"a", "cloud_properties"=>{}}]}
 LOGMESSAGE
             expect(logger_io.string).to include(expected_deployment_manifest_log)
             expect(logger_io.string).to include(expected_cloud_manifest_log)
@@ -199,14 +199,14 @@ LOGMESSAGE
 
             describe 'releases' do
               let(:manifest_hash) do
-                manifest_hash = Bosh::Spec::Deployments.simple_manifest.merge(
+                manifest_hash = Bosh::Spec::NewDeployments.simple_manifest_with_instance_groups.merge(
                   'releases' => [
                     { 'name' => 'bosh-release', 'version' => 1 },
                     { 'name' => 'bar-release', 'version' => 2 }
                   ]
                 )
 
-                manifest_hash['jobs'].first['release'] = 'bosh-release'
+                manifest_hash['instance_groups'].first['jobs'].first['release'] = 'bosh-release'
                 manifest_hash
               end
 
@@ -281,7 +281,7 @@ LOGMESSAGE
 
             describe 'disk_pools' do
               let(:cloud_config_hash) do
-                Bosh::Spec::Deployments.simple_cloud_config.merge(
+                Bosh::Spec::NewDeployments.simple_cloud_config.merge(
                   'disk_pools' => [
                     { 'name' => 'disk_pool1', 'disk_size' => 3000 },
                     { 'name' => 'disk_pool2', 'disk_size' => 1000 }
@@ -298,7 +298,7 @@ LOGMESSAGE
 
             describe 'jobs' do
               let(:cloud_config_hash) do
-                hash = Bosh::Spec::Deployments.simple_cloud_config.merge(
+                hash = Bosh::Spec::NewDeployments.simple_cloud_config.merge(
                   'azs' => [
                     { 'name' => 'zone1', 'cloud_properties' => { foo: 'bar' } },
                     { 'name' => 'zone2', 'cloud_properties' => { foo: 'baz' } }
@@ -307,7 +307,7 @@ LOGMESSAGE
                 hash['compilation']['az'] = 'zone1'
 
                 first_subnet = hash['networks'][0]['subnets']
-                first_subnet << Bosh::Spec::Deployments.subnet(
+                first_subnet << Bosh::Spec::NewDeployments.subnet(
                   'range' => '192.168.2.0/24',
                   'gateway' => '192.168.2.1',
                   'dns' => ['192.168.2.1', '192.168.2.2'],
@@ -322,9 +322,9 @@ LOGMESSAGE
               end
 
               let(:manifest_hash) do
-                Bosh::Spec::Deployments.simple_manifest.merge(
-                  'jobs' => [
-                    Bosh::Spec::Deployments.simple_job.merge('azs' => %w[zone1 zone2])
+                Bosh::Spec::NewDeployments.simple_manifest_with_instance_groups.merge(
+                  'instance_groups' => [
+                    Bosh::Spec::NewDeployments.simple_instance_group.merge('azs' => %w[zone1 zone2])
                   ]
                 )
               end
@@ -339,10 +339,10 @@ LOGMESSAGE
 
               context 'when there are two jobs with two availability zones' do
                 let(:manifest_hash) do
-                  Bosh::Spec::Deployments.simple_manifest.merge(
-                    'jobs' => [
-                      Bosh::Spec::Deployments.simple_job.merge('azs' => ['zone1']),
-                      Bosh::Spec::Deployments.simple_job(name: 'bar').merge('azs' => ['zone2'])
+                  Bosh::Spec::NewDeployments.simple_manifest_with_instance_groups.merge(
+                    'instance_groups' => [
+                      Bosh::Spec::NewDeployments.simple_instance_group.merge('azs' => ['zone1']),
+                      Bosh::Spec::NewDeployments.simple_instance_group(name: 'bar').merge('azs' => ['zone2'])
                     ]
                   )
                 end
@@ -396,13 +396,13 @@ LOGMESSAGE
 
         def upload_releases
           manifest_hash['releases'].each do |release_entry|
-            job = manifest_hash['jobs'].first
+            instance_group = manifest_hash['instance_groups'].first
             release = Models::Release.make(name: release_entry['name'])
-            template = Models::Template.make(name: job['templates'].first['name'], release: release)
-            template2 = Models::Template.make(name: 'provides_job', release: release, spec: { properties: { 'a' => { default: 'b' } } })
+            job = Models::Template.make(name: instance_group['jobs'].first['name'], release: release)
+            job2 = Models::Template.make(name: 'provides_job', release: release, spec: { properties: { 'a' => { default: 'b' } } })
             release_version = Models::ReleaseVersion.make(release: release, version: release_entry['version'])
-            release_version.add_template(template)
-            release_version.add_template(template2)
+            release_version.add_template(job)
+            release_version.add_template(job2)
           end
 
           runtime_config_hash['releases'].each do |release_entry|
@@ -414,7 +414,7 @@ LOGMESSAGE
         end
 
         def upload_stemcell
-          stemcell_entry = cloud_config_hash['resource_pools'].first['stemcell']
+          stemcell_entry = manifest_hash['stemcells'].first
           Models::Stemcell.make(name: stemcell_entry['name'], version: stemcell_entry['version'])
         end
       end

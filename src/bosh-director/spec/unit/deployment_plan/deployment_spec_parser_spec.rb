@@ -322,15 +322,15 @@ module Bosh::Director
         end
       end
 
-      shared_examples_for 'jobs/instance_groups key' do
-        context 'when there is at least one job' do
-          before { manifest_hash.merge!(keyword => []) }
+      describe 'instance_groups key' do
+        context 'when there is at least one instance_group' do
+          before { manifest_hash.merge!('instance_groups' => []) }
 
           let(:event_log) { instance_double('Bosh::Director::EventLog::Log') }
 
-          context 'when job names are unique' do
+          context 'when instance group names are unique' do
             before do
-              manifest_hash.merge!(keyword => [
+              manifest_hash.merge!('instance_groups' => [
                 { 'name' => 'instance-group-1-name' },
                 { 'name' => 'instance-group-2-name' },
               ])
@@ -352,7 +352,7 @@ module Bosh::Director
               })
             end
 
-            it 'delegates to Job to parse job specs' do
+            it 'delegates to InstanceGroup to parse instance group specs' do
               expect(DeploymentPlan::InstanceGroup).to receive(:parse).
                 with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, {'is_deploy_action' => true}).
                 and_return(instance_group_1)
@@ -368,7 +368,7 @@ module Bosh::Director
               let(:options) do
                 { 'is_deploy_action' => true, 'canaries' => '42' }
               end
-              it "replaces canaries value from job's update section with option's value" do
+              it "replaces canaries value from instance group's update section with option's value" do
                 expect(DeploymentPlan::InstanceGroup).to receive(:parse)
                   .with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, options)
                   .and_return(instance_group_1)
@@ -385,7 +385,7 @@ module Bosh::Director
               let(:options) do
                 { 'is_deploy_action' => true, 'max_in_flight' => '42' }
               end
-              it "replaces max_in_flight value from job's update section with option's value" do
+              it "replaces max_in_flight value from instance group's update section with option's value" do
                 expect(DeploymentPlan::InstanceGroup).to receive(:parse)
                    .with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, options)
                    .and_return(instance_group_1)
@@ -398,7 +398,7 @@ module Bosh::Director
               end
             end
 
-            it 'allows to look up job by name' do
+            it 'allows to look up instance group by name' do
               allow(DeploymentPlan::InstanceGroup).to receive(:parse).
                 with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, {'is_deploy_action' => true}).
                 and_return(instance_group_1)
@@ -415,7 +415,7 @@ module Bosh::Director
 
           context 'when more than one instance group have the same canonical name' do
             before do
-              manifest_hash.merge!(keyword => [
+              manifest_hash.merge!('instance_groups' => [
                 { 'name' => 'instance-group-1-name' },
                 { 'name' => 'instance-group-2-name' },
               ])
@@ -456,46 +456,32 @@ module Bosh::Director
           end
         end
 
-        context 'when there are no jobs' do
-          before { manifest_hash.merge!(keyword => []) }
+        context 'when there are no instance groups' do
+          before { manifest_hash.merge!('instance_groups' => []) }
 
-          it 'parses jobs and return empty array' do
+          it 'parses instance groups and return empty array' do
             expect(parsed_deployment.instance_groups).to eq([])
           end
         end
 
-        context 'when jobs key is not specified' do
-          before { manifest_hash.delete(keyword) }
+        context 'when instance groups key is not specified' do
+          before { manifest_hash.delete('instance_groups') }
 
-          it 'parses jobs and return empty array' do
+          it 'parses instance groups and return empty array' do
             expect(parsed_deployment.instance_groups).to eq([])
           end
         end
-      end
 
-      describe 'jobs key' do
-        let(:keyword) { "jobs" }
-        it_behaves_like "jobs/instance_groups key"
-      end
-
-      describe 'instance_group key' do
-        let(:keyword) { "instance_groups" }
-        it_behaves_like "jobs/instance_groups key"
-
-        context 'when there are both jobs and instance_groups' do
+        context 'when there is a jobs key' do
           before do
             manifest_hash.merge!('jobs' => [
-                                     { 'name' => 'instance-group-1-name' },
-                                     { 'name' => 'instance-group-2-name' },
-                                 ],
-                                 'instance_groups' => [
                                      { 'name' => 'instance-group-1-name' },
                                      { 'name' => 'instance-group-2-name' },
                                  ])
           end
 
-          it 'throws an error' do
-            expect {parsed_deployment}.to raise_error(JobBothInstanceGroupAndJob, "Deployment specifies both jobs and instance_groups keys, only one is allowed")
+          it 'throws a deprecation error' do
+            expect { parsed_deployment }.to raise_error(V1DeprecatedJob, 'Jobs are no longer supported, please use instance groups instead')
           end
         end
       end

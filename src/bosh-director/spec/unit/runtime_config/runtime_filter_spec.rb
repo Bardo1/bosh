@@ -8,8 +8,8 @@ module Bosh::Director
     let(:deployment_model) { Models::Deployment.make(name: deployment_name) }
     let(:deployment_plan) do
       planner_attributes = {name: deployment_name, properties: {}}
-      cloud_config = Bosh::Spec::Deployments.simple_cloud_config
-      manifest = Bosh::Spec::Deployments.simple_manifest
+      cloud_config = Bosh::Spec::NewDeployments.simple_cloud_config
+      manifest = Bosh::Spec::NewDeployments.simple_manifest_with_instance_groups
       planner = DeploymentPlan::Planner.new(planner_attributes, manifest, YAML.dump(manifest), [Models::Config.make(:cloud, content: YAML.dump(cloud_config))], Bosh::Spec::Deployments.simple_runtime_config, deployment_model)
 
       release1 = Models::Release.make(name: '1')
@@ -20,6 +20,9 @@ module Bosh::Director
       release_version2.add_template(Models::Template.make(name: 'job2', release: release2))
       planner.add_release(DeploymentPlan::ReleaseVersion.parse(deployment_model, 'name' => '1', 'version' => 'v1'))
       planner.add_release(DeploymentPlan::ReleaseVersion.parse(deployment_model, 'name' => '2', 'version' => 'v2'))
+
+      stemcell = DeploymentPlan::Stemcell.parse(manifest['stemcells'].first)
+      planner.add_stemcell(stemcell)
 
       planner.cloud_planner = DeploymentPlan::CloudManifestParser.new(logger).parse(cloud_config,
         DeploymentPlan::GlobalNetworkResolver.new(planner, [], logger),
@@ -34,12 +37,12 @@ module Bosh::Director
     end
 
     let(:instance_group1) do
-      group1_spec = Bosh::Spec::Deployments.simple_instance_group(name: 'group1', jobs: [{'name' => 'job1', 'release' => '1'}])
+      group1_spec = Bosh::Spec::NewDeployments.simple_instance_group(name: 'group1', jobs: [{'name' => 'job1', 'release' => '1'}])
       DeploymentPlan::InstanceGroup.parse(deployment_plan, group1_spec, Config.event_log, logger)
     end
 
     let(:instance_group2) do
-      group2_spec = Bosh::Spec::Deployments.simple_instance_group(name: 'group2', jobs: [{'name' => 'job1', 'release' => '1'}, {'name' => 'job2', 'release' => '2'}])
+      group2_spec = Bosh::Spec::NewDeployments.simple_instance_group(name: 'group2', jobs: [{'name' => 'job1', 'release' => '1'}, {'name' => 'job2', 'release' => '2'}])
       DeploymentPlan::InstanceGroup.parse(deployment_plan, group2_spec, Config.event_log, logger)
     end
 

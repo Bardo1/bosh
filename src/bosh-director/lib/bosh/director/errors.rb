@@ -166,7 +166,7 @@ module Bosh::Director
   NetworkReservationIpReserved = err(130013)
   NetworkReservationVipMisconfigured = err(130014)
 
-  # Manifest parsing: job section
+  # Manifest parsing: instance group section
   InstanceGroupMissingRelease = err(140001)
   InstanceGroupUnknownRelease = err(140002)
   InstanceGroupUnknownResourcePool = err(140003)
@@ -176,7 +176,7 @@ module Bosh::Director
   InstanceGroupInvalidInstanceState = err(140007)
   InstanceGroupInvalidState = err(140008)
   JobMissingNetwork = err(140009)
-  InstanceGroupInvalidTemplates = err(140010)
+  InstanceGroupInvalidJobs = err(140010)
   JobInvalidLifecycle = err(140011)
   InstanceGroupUnknownDiskType = err(140012)
   InstanceGroupInvalidPersistentDisk = err(140013)
@@ -190,7 +190,11 @@ module Bosh::Director
   JobInstanceIgnored = err(140021)
   InstanceGroupBadVmConfiguration = err(140022)
 
-  # Manifest parsing: job networks section
+  V1DeprecatedJob = err(140023)
+  V1DeprecatedTemplate = err(140024)
+  V1DeprecatedResourcePool = err(140025)
+
+  # Manifest parsing: instance group networks section
   JobUnknownNetwork = err(150001)
   InstanceGroupNetworkInstanceIpMismatch = err(150002)
   JobNetworkInvalidDefault = err(150003)

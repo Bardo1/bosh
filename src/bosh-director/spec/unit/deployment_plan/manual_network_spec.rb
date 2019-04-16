@@ -1,29 +1,38 @@
 require 'spec_helper'
 
 describe Bosh::Director::DeploymentPlan::ManualNetwork do
-  let(:manifest_hash) do
-    manifest_hash = Bosh::Spec::Deployments.legacy_manifest
-    manifest_hash['networks'].first['subnets'].first['range'] = network_range
-    manifest_hash['networks'].first['subnets'].first['reserved'] << '192.168.1.3'
-    manifest_hash['networks'].first['subnets'].first['static'] = static_ips
-    manifest_hash
+  let(:cloud_config_hash) do
+    cloud_config = Bosh::Spec::NewDeployments.simple_cloud_config
+    cloud_config['networks'].first['subnets'].first['range'] = network_range
+    cloud_config['networks'].first['subnets'].first['reserved'] << '192.168.1.3'
+    cloud_config['networks'].first['subnets'].first['static'] = static_ips
+    cloud_config
   end
-  let(:manifest) { Bosh::Director::Manifest.new(manifest_hash, YAML.dump(manifest_hash), {}, nil) }
+  let(:manifest_hash) do
+    manifest = Bosh::Spec::NewDeployments.minimal_manifest
+    manifest['stemcells'].first['version'] = 1
+    manifest
+  end
+  let(:manifest) { Bosh::Director::Manifest.new(manifest_hash, YAML.dump(manifest_hash), cloud_config_hash, nil) }
   let(:network_range) { '192.168.1.0/24' }
   let(:static_ips) { [] }
-  let(:network_spec) { manifest_hash['networks'].first }
+  let(:network_spec) { cloud_config_hash['networks'].first }
   let(:planner_factory) do
     BD::DeploymentPlan::PlannerFactory.create(BD::Config.logger)
   end
   let(:deployment_plan) do
-    planner_factory.create_from_manifest(manifest, [], [], {})
+    cloud_configs = [Bosh::Director::Models::Config.make(:cloud, content: YAML.dump(cloud_config_hash))]
+    planner = planner_factory.create_from_manifest(manifest, cloud_configs, [], {})
+    stemcell = BD::DeploymentPlan::Stemcell.parse(manifest_hash['stemcells'].first)
+    planner.add_stemcell(stemcell)
+    planner
   end
   let(:global_network_resolver) do
     BD::DeploymentPlan::GlobalNetworkResolver.new(deployment_plan, [], logger)
   end
   let(:instance_model) { BD::Models::Instance.make }
 
-  subject(:manual_network) do
+  let(:manual_network) do
     BD::DeploymentPlan::ManualNetwork.parse(
       network_spec,
       [
@@ -77,8 +86,8 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
 
     context 'when network is managed' do
       let(:network_spec) do
-        manifest_hash['networks'].first['managed'] = true
-        manifest_hash['networks'].first
+        cloud_config_hash['networks'].first['managed'] = true
+        cloud_config_hash['networks'].first
       end
 
       it 'should set the managed property for managed networks' do
@@ -95,11 +104,15 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
     end
 
     context 'when there are overlapping subnets' do
-      let(:manifest) do
-        manifest = Bosh::Spec::Deployments.legacy_manifest
-        manifest['networks'].first['subnets'] << Bosh::Spec::Deployments
-          .subnet('range' => '192.168.1.0/28')
-        Bosh::Director::Manifest.new(manifest, YAML.dump(manifest), {}, nil)
+      let(:cloud_config_hash) do
+        # Replacing manifest changes below with CC changes
+        cloud_config = Bosh::Spec::NewDeployments.simple_cloud_config
+        cloud_config['networks'].first['subnets'].first['range'] = network_range
+        cloud_config['networks'].first['subnets'].first['reserved'] << '192.168.1.3'
+        cloud_config['networks'].first['subnets'].first['static'] = static_ips
+        cloud_config['networks'].first['subnets'] << Bosh::Spec::Deployments
+                                                   .subnet('range' => '192.168.1.0/28')
+        cloud_config
       end
 
       it 'should raise an error' do
@@ -111,6 +124,10 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
   end
 
   describe :network_settings do
+    before do
+      # manual_network needs to be evaluated before instance_model for unclear reasons
+      manual_network
+    end
     it 'should provide the network settings from the subnet' do
       reservation = BD::DesiredNetworkReservation.new_static(
         instance_model,

@@ -91,20 +91,17 @@ module Bosh::Director
       end
 
       def parse_instance_groups(parse_options)
-        if @deployment_manifest.has_key?('jobs') && @deployment_manifest.has_key?('instance_groups')
-          raise JobBothInstanceGroupAndJob, "Deployment specifies both jobs and instance_groups keys, only one is allowed"
+        if @deployment_manifest.has_key?('jobs')
+          raise V1DeprecatedJob, 'Jobs are no longer supported, please use instance groups instead'
         end
 
-        jobs = safe_property(@deployment_manifest, 'jobs', :class => Array, :default => [])
         instance_groups = safe_property(@deployment_manifest, 'instance_groups', :class => Array, :default => [])
 
-        jobs = instance_groups unless instance_groups.empty?
-
-        jobs.each do |job_spec|
-          # get state specific for this job or all jobs
-          state_overrides = @job_states.fetch(job_spec['name'], @job_states.fetch('*', {}))
-          job_spec = job_spec.recursive_merge(state_overrides)
-          @deployment.add_instance_group(InstanceGroup.parse(@deployment, job_spec, @event_log, @logger, parse_options))
+        instance_groups.each do |instance_group_spec|
+          # get state specific for this instance_group or all instance_groups
+          state_overrides = @job_states.fetch(instance_group_spec['name'], @job_states.fetch('*', {}))
+          instance_group_spec = instance_group_spec.recursive_merge(state_overrides)
+          @deployment.add_instance_group(InstanceGroup.parse(@deployment, instance_group_spec, @event_log, @logger, parse_options))
         end
       end
 

@@ -32,7 +32,12 @@ module Bosh::Director::DeploymentPlan
 
     let(:network_planner) { NetworkPlanner::Planner.new(logger) }
     let(:network_reservation_repository) { BD::DeploymentPlan::NetworkReservationRepository.new(planner, logger) }
-    let(:planner) { planner_factory.create_from_manifest(manifest, cloud_configs, [], {}) }
+    let(:planner) do
+      planner = planner_factory.create_from_manifest(manifest, cloud_configs, [], {})
+      stemcell = Stemcell.parse(manifest_hash['stemcells'].first)
+      planner.add_stemcell(stemcell)
+      planner
+    end
     let(:planner_factory) { PlannerFactory.new(deployment_manifest_migrator, manifest_validator, deployment_repo, logger) }
     let(:manifest_validator) { Bosh::Director::DeploymentPlan::ManifestValidator.new }
     let(:manifest) { Bosh::Director::Manifest.new(manifest_hash, YAML.dump(manifest_hash), cloud_config_hash, nil) }
@@ -76,15 +81,9 @@ module Bosh::Director::DeploymentPlan
       {
         'networks' => networks_spec,
         'compilation' => { 'workers' => 1, 'network' => 'a', 'cloud_properties' => {}, 'az' => cloud_config_availability_zones.first['name'] },
-        'resource_pools' => [
-          {
-            'name' => 'a',
-            'size' => 3,
-            'cloud_properties' => {},
-            'network' => 'a',
-            'stemcell' => { 'name' => 'ubuntu-stemcell', 'version' => '1' }
-          }
-        ],
+        'vm_types' => [{
+          'name' => 'tiny'
+        }],
         'azs' => cloud_config_availability_zones
       }
     end
@@ -100,11 +99,13 @@ module Bosh::Director::DeploymentPlan
         'director_uuid' => 'deadbeef',
         'releases' => [{ 'name' => 'bosh-release', 'version' => '0.1-dev' }],
         'update' => { 'canaries' => 2, 'canary_watch_time' => 4000, 'max_in_flight' => 1, 'update_watch_time' => 20 },
-        'jobs' => [
+        'stemcells' => [{ 'name' => 'ubuntu-stemcell', 'version' => '1', 'alias' => 'default'}],
+        'instance_groups' => [
           {
             'name' => 'fake-job',
-            'templates' => [{ 'name' => 'foobar' }],
-            'resource_pool' => 'a',
+            'jobs' => [{ 'name' => 'foobar' }],
+            'vm_type' => 'tiny',
+            'stemcell' => 'default',
             'instances' => desired_instance_count,
             'networks' => job_networks,
             'properties' => {},
@@ -146,7 +147,7 @@ module Bosh::Director::DeploymentPlan
             ]
           end
           before do
-            manifest_hash['jobs'].each { |entry| entry.delete('azs') }
+            manifest_hash['instance_groups'].each { |entry| entry.delete('azs') }
             cloud_config_hash['compilation'].delete('az')
           end
 
@@ -740,7 +741,7 @@ module Bosh::Director::DeploymentPlan
               end
 
               before do
-                manifest_hash['jobs'].each { |entry| entry.delete('azs') }
+                manifest_hash['instance_groups'].each { |entry| entry.delete('azs') }
                 cloud_config_hash['compilation'].delete('az')
               end
 

@@ -31,13 +31,12 @@ module Bosh::Director
 
         merged_global_and_instance_group_properties = extract_global_and_instance_group_properties
 
-        parse_legacy_template(merged_global_and_instance_group_properties)
         parse_jobs(merged_global_and_instance_group_properties, options['is_deploy_action'])
 
         check_job_uniqueness
         parse_disks
 
-        parse_resource_pool
+        parse_vm_type
         update_env_from_features
 
         parse_options = {}
@@ -102,45 +101,10 @@ module Bosh::Director
         end
       end
 
-      # legacy template parsing
-      def parse_legacy_template(merged_global_and_instance_group_properties)
-        job_names = safe_property(@instance_group_spec, 'template', optional: true)
-        if job_names
-          if job_names.is_a?(Array)
-            @event_log.warn_deprecated(
-              "Please use 'templates' when specifying multiple templates for a job. " +
-              "'template' for multiple templates will soon be unsupported."
-            )
-          end
-
-          unless job_names.is_a?(Array) || job_names.is_a?(String)
-            invalid_type("template", "String or Array", job_names)
-          end
-
-          unless @instance_group.release
-            raise InstanceGroupMissingRelease, "Cannot tell what release job '#{@instance_group.name}' is supposed to use, please explicitly specify one"
-          end
-
-          Array(job_names).each do |job_name|
-            current_job = @instance_group.release.get_or_create_template(job_name)
-            current_job.add_properties(
-              merged_global_and_instance_group_properties,
-              @instance_group.name
-            )
-            @instance_group.jobs << current_job
-          end
-        end
-      end
-
       def parse_jobs(merged_global_and_instance_group_properties, is_deploy_action)
-        legacy_jobs = safe_property(@instance_group_spec, 'templates', class: Array, optional: true)
         jobs = safe_property(@instance_group_spec, 'jobs', class: Array, optional: true)
 
         migrated_from = safe_property(@instance_group_spec, 'migrated_from', class: Array, optional: true, :default => [])
-
-        if jobs.nil?
-          jobs = legacy_jobs
-        end
 
         if jobs
           release_manager = Api::ReleaseManager.new
@@ -237,7 +201,7 @@ module Bosh::Director
         all_names = @instance_group.jobs.map(&:name)
         @instance_group.jobs.each do |job|
           if all_names.count(job.name) > 1
-            raise InstanceGroupInvalidTemplates,
+            raise InstanceGroupInvalidJobs,
                   "Colocated job '#{job.name}' is already added to the instance group '#{@instance_group.name}'"
           end
         end
@@ -335,68 +299,46 @@ module Bosh::Director
         merged_properties
       end
 
-      def parse_resource_pool
+      def parse_vm_type
         env_hash = safe_property(@instance_group_spec, 'env', class: Hash, :default => {})
 
         resource_pool_name = safe_property(@instance_group_spec, 'resource_pool', class: String, optional: true)
+
+        if resource_pool_name
+          raise V1DeprecatedResourcePool,
+                "Instance groups no longer support resource_pool, please use 'vm_type' or 'vm_resources' keys"
+        end
+
         vm_type_name = safe_property(@instance_group_spec, 'vm_type', class: String, optional: true)
         vm_resources = safe_property(@instance_group_spec, 'vm_resources', class: Hash, optional: true)
 
-        statement_count = [resource_pool_name, vm_type_name, vm_resources].compact.count
-        if statement_count == 0
+        statement_count = [vm_type_name, vm_resources].compact.count
+        if statement_count.zero?
           raise InstanceGroupBadVmConfiguration,
-            "Instance group '#{@instance_group.name}' is missing either 'vm_type' or 'vm_resources' or 'resource_pool' section."
+                "Instance group '#{@instance_group.name}' is missing either 'vm_type' or 'vm_resources' section."
         elsif statement_count > 1
           raise InstanceGroupBadVmConfiguration,
-            "Instance group '#{@instance_group.name}' can only specify one of 'resource_pool', 'vm_type' or 'vm_resources' keys."
+                "Instance group '#{@instance_group.name}' can only specify 'vm_type' or 'vm_resources' keys."
         end
 
-        if resource_pool_name
-          resource_pool = @deployment.resource_pool(resource_pool_name)
-          if resource_pool.nil?
-            raise InstanceGroupUnknownResourcePool,
-              "Instance group '#{@instance_group.name}' references an unknown resource pool '#{resource_pool_name}'"
-          end
+        vm_type = nil
 
-          vm_type = VmType.new({
-            'name' => resource_pool.name,
-            'cloud_properties' => resource_pool.cloud_properties
-          })
+        if vm_type_name
+          vm_type = @deployment.vm_type(vm_type_name)
+          raise InstanceGroupUnknownVmType, "Instance group '#{@instance_group.name}' references an unknown vm type '#{vm_type_name}'" unless vm_type
+        elsif vm_resources
+          vm_resources = VmResources.new(vm_resources)
+          @logger.debug("Using 'vm_resources' block for instance group '#{@instance_group.name}'")
+        end
 
-          vm_resources = nil
-          vm_extensions = []
+        vm_extension_names = Array(safe_property(@instance_group_spec, 'vm_extensions', class: Array, optional: true))
+        vm_extensions = Array(vm_extension_names).map {|vm_extension_name| @deployment.vm_extension(vm_extension_name)}
 
-          stemcell = resource_pool.stemcell
-
-          if !env_hash.empty? && !resource_pool.env.empty?
-            raise InstanceGroupAmbiguousEnv,
-              "Instance group '#{@instance_group.name}' and resource pool: '#{resource_pool_name}' both declare env properties"
-          end
-
-          if env_hash.empty?
-            env_hash = resource_pool.env
-          end
-
-        else
-          vm_type = nil
-
-          if vm_type_name
-            vm_type = @deployment.vm_type(vm_type_name)
-            raise InstanceGroupUnknownVmType, "Instance group '#{@instance_group.name}' references an unknown vm type '#{vm_type_name}'" unless vm_type
-          elsif vm_resources
-            vm_resources = VmResources.new(vm_resources)
-            @logger.debug("Using 'vm_resources' block for instance group '#{@instance_group.name}'")
-          end
-
-          vm_extension_names = Array(safe_property(@instance_group_spec, 'vm_extensions', class: Array, optional: true))
-          vm_extensions = Array(vm_extension_names).map {|vm_extension_name| @deployment.vm_extension(vm_extension_name)}
-
-          stemcell_name = safe_property(@instance_group_spec, 'stemcell', class: String)
-          stemcell = @deployment.stemcell(stemcell_name)
-          if stemcell.nil?
-            raise InstanceGroupUnknownStemcell,
-              "Instance group '#{@instance_group.name}' references an unknown stemcell '#{stemcell_name}'"
-          end
+        stemcell_name = safe_property(@instance_group_spec, 'stemcell', class: String)
+        stemcell = @deployment.stemcell(stemcell_name)
+        if stemcell.nil?
+          raise InstanceGroupUnknownStemcell,
+            "Instance group '#{@instance_group.name}' references an unknown stemcell '#{stemcell_name}'"
         end
 
         @instance_group.vm_resources = vm_resources
@@ -462,22 +404,12 @@ module Bosh::Director
         templates_property = safe_property(@instance_group_spec, 'templates', optional: true)
         jobs_property = safe_property(@instance_group_spec, 'jobs', optional: true)
 
-        if template_property && templates_property
-          raise InstanceGroupInvalidTemplates, "Instance group '#{@instance_group.name}' specifies both template and templates keys, only one is allowed"
+        if template_property || templates_property
+          raise V1DeprecatedTemplate,
+            "Instance group '#{@instance_group.name}' specifies template or templates. This is no longer supported, please use jobs instead"
         end
 
-        if templates_property && jobs_property
-          raise InstanceGroupInvalidTemplates, "Instance group '#{@instance_group.name}' specifies both templates and jobs keys, only one is allowed"
-        end
-
-        if template_property && jobs_property
-          raise InstanceGroupInvalidTemplates, "Instance group '#{@instance_group.name}' specifies both template and jobs keys, only one is allowed"
-        end
-
-        if [template_property, templates_property, jobs_property].compact.empty?
-          raise ValidationMissingField,
-                "Instance group '#{@instance_group.name}' does not specify jobs key"
-        end
+        raise ValidationMissingField, "Instance group '#{@instance_group.name}' does not specify jobs key" if jobs_property.nil?
       end
 
       def assign_default_networks(networks)

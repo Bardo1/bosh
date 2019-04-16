@@ -37,10 +37,10 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
       network_spec,
       [
         BD::DeploymentPlan::AvailabilityZone.new('zone_1', {}),
-        BD::DeploymentPlan::AvailabilityZone.new('zone_2', {})
+        BD::DeploymentPlan::AvailabilityZone.new('zone_2', {}),
       ],
       global_network_resolver,
-      logger
+      logger,
     )
   end
 
@@ -65,11 +65,11 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
     release = Bosh::Director::Models::Release.make(name: 'bosh-release')
     template = Bosh::Director::Models::Template.make(
       name: 'foobar',
-      release: release
+      release: release,
     )
     release_version = Bosh::Director::Models::ReleaseVersion.make(
       version: '0.1-dev',
-      release: release
+      release: release,
     )
     release_version.add_template(template)
   end
@@ -111,7 +111,7 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
         cloud_config['networks'].first['subnets'].first['reserved'] << '192.168.1.3'
         cloud_config['networks'].first['subnets'].first['static'] = static_ips
         cloud_config['networks'].first['subnets'] << Bosh::Spec::Deployments
-                                                   .subnet('range' => '192.168.1.0/28')
+                                                     .subnet('range' => '192.168.1.0/28')
         cloud_config
       end
 
@@ -132,7 +132,7 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
       reservation = BD::DesiredNetworkReservation.new_static(
         instance_model,
         manual_network,
-        '192.168.1.2'
+        '192.168.1.2',
       )
 
       expect(manual_network.network_settings(reservation, [])).to eq(
@@ -142,7 +142,7 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
         'cloud_properties' => {},
         'gateway' => '192.168.1.1',
         'dns' => ['192.168.1.1', '192.168.1.2'],
-        'default' => []
+        'default' => [],
       )
     end
 
@@ -150,7 +150,7 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
       reservation = BD::DesiredNetworkReservation.new_static(
         instance_model,
         manual_network,
-        '192.168.1.2'
+        '192.168.1.2',
       )
 
       expect(manual_network.network_settings(reservation)).to eq(
@@ -160,14 +160,14 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
         'cloud_properties' => {},
         'gateway' => '192.168.1.1',
         'dns' => ['192.168.1.1', '192.168.1.2'],
-        'default' => %w[dns gateway]
+        'default' => %w[dns gateway],
       )
     end
 
     it 'should fail when there is no IP' do
       reservation = BD::DesiredNetworkReservation.new_dynamic(
         instance_model,
-        manual_network
+        manual_network,
       )
 
       expect do
@@ -183,19 +183,19 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
           {
             'range' => '10.1.0.0/24',
             'gateway' => '10.1.0.1',
-            'az' => 'zone_1'
+            'az' => 'zone_1',
           },
           {
             'range' => '10.2.0.0/24',
             'gateway' => '10.2.0.1',
-            'az' => 'zone_2'
+            'az' => 'zone_2',
           },
           {
             'range' => '10.4.0.0/24',
             'gateway' => '10.4.0.1',
-            'az' => 'zone_1'
-          }
-        ]
+            'az' => 'zone_1',
+          },
+        ],
       )
     end
 
@@ -211,14 +211,14 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
           {
             'range' => '10.1.0.0/24',
             'gateway' => '10.1.0.1',
-            'az' => 'zone_1'
+            'az' => 'zone_1',
           },
           {
             'range' => '10.2.0.0/24',
             'gateway' => '10.2.0.1',
-            'az' => 'zone_2'
-          }
-        ]
+            'az' => 'zone_2',
+          },
+        ],
       )
     end
 
@@ -245,7 +245,7 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
     context 'when there are no subnets' do
       let(:network_spec) do
         Bosh::Spec::Deployments.network.merge(
-          'subnets' => []
+          'subnets' => [],
         )
       end
 
@@ -262,13 +262,13 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
           {
             'range' => '10.10.1.0/24',
             'gateway' => '10.10.1.1',
-            'az' => 'zone_1'
+            'az' => 'zone_1',
           },
           {
             'range' => '10.10.2.0/24',
-            'gateway' => '10.10.2.1'
-          }
-        ]
+            'gateway' => '10.10.2.1',
+          },
+        ],
       )
     end
 
@@ -276,7 +276,7 @@ describe Bosh::Director::DeploymentPlan::ManualNetwork do
       expect { manual_network }.to raise_error(
         Bosh::Director::JobInvalidAvailabilityZone,
         "Subnets on network 'a' must all either specify availability " \
-        'zone or not'
+        'zone or not',
       )
     end
   end

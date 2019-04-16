@@ -12,7 +12,7 @@ module Bosh::Director
     # @param [Exception] exception
     # @return [DirectorError] Director error
     def self.create_from_exception(exception)
-      if exception.kind_of?(DirectorError)
+      if exception.is_a?(DirectorError)
         exception
       else
         DirectorError.new(exception.message)
@@ -42,7 +42,7 @@ module Bosh::Director
       super
       @response_code = 500
       @error_code = 100
-      @format = "Director error: %s"
+      @format = 'Director error: %s'
     end
   end
 
@@ -200,9 +200,9 @@ module Bosh::Director
   JobNetworkInvalidDefault = err(150003)
   JobNetworkMultipleDefaults = err(150004)
   JobNetworkMissingDefault = err(150005)
-  JobNetworkMissingRequiredAvailabilityZone= err(150006)
-  JobStaticIpsFromInvalidAvailabilityZone= err(150007)
-  JobStaticIPNotSupportedOnDynamicNetwork= err(150008)
+  JobNetworkMissingRequiredAvailabilityZone = err(150006)
+  JobStaticIpsFromInvalidAvailabilityZone = err(150007)
+  JobStaticIPNotSupportedOnDynamicNetwork = err(150008)
   JobInvalidStaticIPs = err(150009)
 
   # Network
@@ -249,7 +249,7 @@ module Bosh::Director
   DeploymentIgnoredInstancesModification = err(190020)
   DeploymentIgnoredInstancesDeletion = err(190021)
   DeploymentDuplicateVariableName = err(190022)
-  DeploymentNATSClientCertificateGenerationError= err(190023)
+  DeploymentNATSClientCertificateGenerationError = err(190023)
   DeploymentRequired = err(190024)
   DeploymentInvalidConfigReference = err(190025)
 
@@ -309,7 +309,7 @@ module Bosh::Director
   # Disk errors
   DeletingPersistentDiskError = err(520000)
   AttachDiskErrorUnknownInstance = err(520001)
-  AttachDiskNoPersistentDisk =  err(520002)
+  AttachDiskNoPersistentDisk = err(520002)
   AttachDiskInvalidInstanceState = err(520003)
 
   # Addons

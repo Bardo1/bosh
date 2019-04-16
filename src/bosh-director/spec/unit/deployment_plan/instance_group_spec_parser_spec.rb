@@ -187,10 +187,10 @@ module Bosh::Director
                 release_model_2 = Models::Release.make(name: 'fake-release-2')
                 fake_release_version_model = Models::ReleaseVersion.make(version: '1', release: release_model_2)
                 fake_release_version_model.add_template(Models::Template.make(
-                  name: 'job-name',
-                  release: release_model_2,
-                  spec: {consumes: [{'name' => "a", 'type' => "db"}]}
-                ))
+                                                          name: 'job-name',
+                                                          release: release_model_2,
+                                                          spec: { consumes: [{ 'name' => 'a', 'type' => 'db' }] },
+                                                        ))
 
                 deployment_model = Models::Deployment.make(name: 'deployment')
                 version.add_deployment(deployment_model)
@@ -633,10 +633,10 @@ module Bosh::Director
                 release_model = Models::Release.make(name: 'fake-release')
                 version = Models::ReleaseVersion.make(version: '1', release: release_model)
                 version.add_template(Models::Template.make(
-                  name: 'job-name',
-                  release: release_model,
-                  spec: {}
-                ))
+                                       name: 'job-name',
+                                       release: release_model,
+                                       spec: {},
+                                     ))
                 release_model.add_version(version)
 
                 deployment_model = Models::Deployment.make(name: 'deployment')
@@ -687,7 +687,7 @@ module Bosh::Director
                 parsed_instance_group
               end.to raise_error(
                 ValidationInvalidType,
-                %{Property '#{'jobs'}' value ("not-an-array") did not match the required type 'Array'},
+                %{Property 'jobs' value ("not-an-array") did not match the required type 'Array'},
               )
             end
           end
@@ -872,7 +872,7 @@ module Bosh::Director
               expect do
                 parsed_instance_group
               end.to raise_error InstanceGroupInvalidPersistentDisk,
-                "Instance group 'instance-group-name' persistent_disks's section contains duplicate names"
+                                 "Instance group 'instance-group-name' persistent_disks's section contains duplicate names"
             end
 
             it 'complains about unknown disk type' do

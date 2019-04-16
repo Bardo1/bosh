@@ -41,16 +41,16 @@ module Bosh::Director
       let(:update_config) { instance_double('Bosh::Director::DeploymentPlan::UpdateConfig') }
 
       before { allow(CloudFactory).to receive(:create).and_return(:cloud) }
-      let(:cloud) {instance_double(CloudFactory)}
+      let(:cloud) { instance_double(CloudFactory) }
 
       describe 'name key' do
         it 'parses name' do
-          manifest_hash.merge!('name' => 'Name with spaces')
+          manifest_hash['name'] = 'Name with spaces'
           expect(parsed_deployment.name).to eq('Name with spaces')
         end
 
         it 'sets canonical name' do
-          manifest_hash.merge!('name' => 'Name with spaces')
+          manifest_hash['name'] = 'Name with spaces'
           expect(parsed_deployment.canonical_name).to eq('namewithspaces')
         end
       end
@@ -68,7 +68,7 @@ module Bosh::Director
 
         context 'when there 1 stemcell' do
           before do
-            stemcell_hash1 = {'alias' => 'stemcell1', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'version' => '1234' }
+            stemcell_hash1 = { 'alias' => 'stemcell1', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'version' => '1234' }
             manifest_hash['stemcells'] = [stemcell_hash1]
           end
 
@@ -78,43 +78,43 @@ module Bosh::Director
 
           it 'should error out if stemcell hash does not have alias' do
             manifest_hash['stemcells'].first.delete('alias')
-            expect {
+            expect do
               parsed_deployment.stemcells
-            }.to raise_error Bosh::Director::ValidationMissingField,
-                "Required property 'alias' was not specified in object " +
-                  '({"name"=>"bosh-aws-xen-hvm-ubuntu-trusty-go_agent", "version"=>"1234"})'
+            end.to raise_error Bosh::Director::ValidationMissingField,
+                               "Required property 'alias' was not specified in object " \
+                               '({"name"=>"bosh-aws-xen-hvm-ubuntu-trusty-go_agent", "version"=>"1234"})'
           end
         end
 
         context 'when there are stemcells with duplicate alias' do
           before do
-            stemcell_hash1 = {'alias' => 'stemcell1', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'version' => '1234' }
+            stemcell_hash1 = { 'alias' => 'stemcell1', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'version' => '1234' }
             manifest_hash['stemcells'] = [stemcell_hash1, stemcell_hash1]
           end
 
           it 'errors out when alias of stemcells are not unique' do
-            expect {
+            expect do
               parsed_deployment.stemcells
-            }.to raise_error Bosh::Director::StemcellAliasAlreadyExists, "Duplicate stemcell alias 'stemcell1'"
+            end.to raise_error Bosh::Director::StemcellAliasAlreadyExists, "Duplicate stemcell alias 'stemcell1'"
           end
         end
 
         context 'when there are stemcells with no OS nor name' do
           before do
-            stemcell_hash1 = {'alias' => 'stemcell1', 'version' => '1234' }
+            stemcell_hash1 = { 'alias' => 'stemcell1', 'version' => '1234' }
             manifest_hash['stemcells'] = [stemcell_hash1]
           end
 
           it 'errors out' do
-            expect {
+            expect do
               parsed_deployment.stemcells
-            }.to raise_error Bosh::Director::ValidationMissingField
+            end.to raise_error Bosh::Director::ValidationMissingField
           end
         end
 
         context 'when there are stemcells with OS' do
           before do
-            stemcell_hash1 = {'alias' => 'stemcell1', 'os' => 'ubuntu-trusty', 'version' => '1234' }
+            stemcell_hash1 = { 'alias' => 'stemcell1', 'os' => 'ubuntu-trusty', 'version' => '1234' }
             manifest_hash['stemcells'] = [stemcell_hash1]
           end
 
@@ -126,21 +126,21 @@ module Bosh::Director
 
         context 'when there are stemcells with both name and OS' do
           before do
-            stemcell_hash1 = {'alias' => 'stemcell1', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'os' => 'ubuntu-trusty', 'version' => '1234' }
+            stemcell_hash1 = { 'alias' => 'stemcell1', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'os' => 'ubuntu-trusty', 'version' => '1234' }
             manifest_hash['stemcells'] = [stemcell_hash1]
           end
 
           it 'errors out' do
-            expect {
+            expect do
               parsed_deployment.stemcells
-            }.to raise_error Bosh::Director::StemcellBothNameAndOS
+            end.to raise_error Bosh::Director::StemcellBothNameAndOS
           end
         end
 
         context 'when there are 2 stemcells' do
           before do
-            stemcell_hash0 = {'alias' => 'stemcell0', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'version' => '1234' }
-            stemcell_hash1 = {'alias' => 'stemcell1', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'version' => '1234' }
+            stemcell_hash0 = { 'alias' => 'stemcell0', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'version' => '1234' }
+            stemcell_hash1 = { 'alias' => 'stemcell1', 'name' => 'bosh-aws-xen-hvm-ubuntu-trusty-go_agent', 'version' => '1234' }
             manifest_hash['stemcells'] = [stemcell_hash0, stemcell_hash1]
           end
 
@@ -152,7 +152,7 @@ module Bosh::Director
 
       describe 'properties key' do
         it 'parses basic properties' do
-          manifest_hash.merge!('properties' => { 'foo' => 'bar' })
+          manifest_hash['properties'] = { 'foo' => 'bar' }
           expect(parsed_deployment.properties).to eq('foo' => 'bar')
         end
 
@@ -173,7 +173,7 @@ module Bosh::Director
         context "when 'release' section is specified" do
           before do
             manifest_hash.delete('releases')
-            manifest_hash.merge!('release' => {'name' => 'rv-name', 'version' => 'abc'})
+            manifest_hash.merge!('release' => { 'name' => 'rv-name', 'version' => 'abc' })
           end
 
           it 'delegates to ReleaseVersion' do
@@ -196,9 +196,9 @@ module Bosh::Director
           context 'when non-duplicate releases are included' do
             before do
               manifest_hash.merge!('releases' => [
-                {'name' => 'rv1-name', 'version' => 'abc'},
-                {'name' => 'rv2-name', 'version' => 'def'},
-              ])
+                                     { 'name' => 'rv1-name', 'version' => 'abc' },
+                                     { 'name' => 'rv2-name', 'version' => 'def' },
+                                   ])
             end
 
             it 'delegates to ReleaseVersion' do
@@ -231,15 +231,15 @@ module Bosh::Director
           context 'when duplicate releases are included' do
             before do
               manifest_hash.merge!('releases' => [
-                {'name' => 'same-name', 'version' => 'abc'},
-                {'name' => 'same-name', 'version' => 'def'},
-              ])
+                                     { 'name' => 'same-name', 'version' => 'abc' },
+                                     { 'name' => 'same-name', 'version' => 'def' },
+                                   ])
             end
 
             it 'raises an error' do
-              expect {
+              expect do
                 parsed_deployment
-              }.to raise_error(/duplicate release name/i)
+              end.to raise_error(/duplicate release name/i)
             end
           end
         end
@@ -249,9 +249,9 @@ module Bosh::Director
           before { manifest_hash.merge!('release' => {}) }
 
           it 'raises an error' do
-            expect {
+            expect do
               parsed_deployment
-            }.to raise_error(/use one of the two/)
+            end.to raise_error(/use one of the two/)
           end
         end
 
@@ -260,9 +260,9 @@ module Bosh::Director
           before { manifest_hash.delete('release') }
 
           it 'raises an error' do
-            expect {
+            expect do
               parsed_deployment
-            }.to raise_error(
+            end.to raise_error(
               ValidationMissingField,
               /Required property 'releases' was not specified in object .+/,
             )
@@ -277,9 +277,9 @@ module Bosh::Director
           it 'delegates parsing to UpdateConfig' do
             update = instance_double('Bosh::Director::DeploymentPlan::UpdateConfig')
 
-            expect(DeploymentPlan::UpdateConfig).to receive(:new).
-              with('foo' => 'bar', 'is_deploy_action' => true).
-              and_return(update)
+            expect(DeploymentPlan::UpdateConfig).to receive(:new)
+              .with('foo' => 'bar', 'is_deploy_action' => true)
+              .and_return(update)
 
             expect(parsed_deployment.update).to eq(update)
           end
@@ -288,12 +288,12 @@ module Bosh::Director
             let(:options) do
               { 'is_deploy_action' => true, 'canaries' => '42' }
             end
-              it "replaces canaries value from job's update section with option's value" do
-                expect(DeploymentPlan::UpdateConfig).to receive(:new)
-                  .with( {'foo'=> 'bar', 'is_deploy_action' => true, 'canaries' => '42'} )
-                  .and_return(update_config)
-                parsed_deployment.update
-              end
+            it "replaces canaries value from job's update section with option's value" do
+              expect(DeploymentPlan::UpdateConfig).to receive(:new)
+                .with('foo' => 'bar', 'is_deploy_action' => true, 'canaries' => '42')
+                .and_return(update_config)
+              parsed_deployment.update
+            end
           end
           context 'when max_in_flight value is present in options' do
             let(:options) do
@@ -301,7 +301,7 @@ module Bosh::Director
             end
             it "replaces max_in_flight value from job's update section with option's value" do
               expect(DeploymentPlan::UpdateConfig).to receive(:new)
-                .with( {'foo'=> 'bar', 'is_deploy_action' => true, 'max_in_flight' => '42'} )
+                .with('foo' => 'bar', 'is_deploy_action' => true, 'max_in_flight' => '42')
                 .and_return(update_config)
               parsed_deployment.update
             end
@@ -312,9 +312,9 @@ module Bosh::Director
           before { manifest_hash.delete('update') }
 
           it 'raises an error' do
-            expect {
+            expect do
               parsed_deployment
-            }.to raise_error(
+            end.to raise_error(
               ValidationMissingField,
               /Required property 'update' was not specified in object .+/,
             )
@@ -331,35 +331,33 @@ module Bosh::Director
           context 'when instance group names are unique' do
             before do
               manifest_hash.merge!('instance_groups' => [
-                { 'name' => 'instance-group-1-name' },
-                { 'name' => 'instance-group-2-name' },
-              ])
+                                     { 'name' => 'instance-group-1-name' },
+                                     { 'name' => 'instance-group-2-name' },
+                                   ])
             end
 
             let(:instance_group_1) do
-              instance_double('Bosh::Director::DeploymentPlan::InstanceGroup', {
-                name: 'instance-group-1-name',
-                canonical_name: 'instance-group-1-canonical-name',
-                jobs: []
-              })
+              instance_double('Bosh::Director::DeploymentPlan::InstanceGroup',
+                              name: 'instance-group-1-name',
+                              canonical_name: 'instance-group-1-canonical-name',
+                              jobs: [])
             end
 
             let(:instance_group_2) do
-              instance_double('Bosh::Director::DeploymentPlan::InstanceGroup', {
-                name: 'instance-group-2-name',
-                canonical_name: 'instance-group-2-canonical-name',
-                jobs: []
-              })
+              instance_double('Bosh::Director::DeploymentPlan::InstanceGroup',
+                              name: 'instance-group-2-name',
+                              canonical_name: 'instance-group-2-canonical-name',
+                              jobs: [])
             end
 
             it 'delegates to InstanceGroup to parse instance group specs' do
-              expect(DeploymentPlan::InstanceGroup).to receive(:parse).
-                with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, {'is_deploy_action' => true}).
-                and_return(instance_group_1)
+              expect(DeploymentPlan::InstanceGroup).to receive(:parse)
+                .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-1-name' }, event_log, logger, 'is_deploy_action' => true)
+                .and_return(instance_group_1)
 
-              expect(DeploymentPlan::InstanceGroup).to receive(:parse).
-                with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-2-name'}, event_log, logger, {'is_deploy_action' => true}).
-                and_return(instance_group_2)
+              expect(DeploymentPlan::InstanceGroup).to receive(:parse)
+                .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-2-name' }, event_log, logger, 'is_deploy_action' => true)
+                .and_return(instance_group_2)
 
               expect(parsed_deployment.instance_groups).to eq([instance_group_1, instance_group_2])
             end
@@ -370,12 +368,12 @@ module Bosh::Director
               end
               it "replaces canaries value from instance group's update section with option's value" do
                 expect(DeploymentPlan::InstanceGroup).to receive(:parse)
-                  .with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, options)
+                  .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-1-name' }, event_log, logger, options)
                   .and_return(instance_group_1)
 
-                expect(DeploymentPlan::InstanceGroup).to receive(:parse).
-                  with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-2-name'}, event_log, logger, options).
-                  and_return(instance_group_2)
+                expect(DeploymentPlan::InstanceGroup).to receive(:parse)
+                  .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-2-name' }, event_log, logger, options)
+                  .and_return(instance_group_2)
 
                 parsed_deployment.instance_groups
               end
@@ -387,26 +385,25 @@ module Bosh::Director
               end
               it "replaces max_in_flight value from instance group's update section with option's value" do
                 expect(DeploymentPlan::InstanceGroup).to receive(:parse)
-                   .with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, options)
-                   .and_return(instance_group_1)
+                  .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-1-name' }, event_log, logger, options)
+                  .and_return(instance_group_1)
 
-                expect(DeploymentPlan::InstanceGroup).to receive(:parse).
-                  with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-2-name'}, event_log, logger, options).
-                  and_return(instance_group_2)
+                expect(DeploymentPlan::InstanceGroup).to receive(:parse)
+                  .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-2-name' }, event_log, logger, options)
+                  .and_return(instance_group_2)
 
                 parsed_deployment.instance_groups
               end
             end
 
             it 'allows to look up instance group by name' do
-              allow(DeploymentPlan::InstanceGroup).to receive(:parse).
-                with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, {'is_deploy_action' => true}).
-                and_return(instance_group_1)
+              allow(DeploymentPlan::InstanceGroup).to receive(:parse)
+                .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-1-name' }, event_log, logger, 'is_deploy_action' => true)
+                .and_return(instance_group_1)
 
-              allow(DeploymentPlan::InstanceGroup).to receive(:parse).
-                with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-2-name'}, event_log, logger, {'is_deploy_action' => true}).
-                and_return(instance_group_2)
-
+              allow(DeploymentPlan::InstanceGroup).to receive(:parse)
+                .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-2-name' }, event_log, logger, 'is_deploy_action' => true)
+                .and_return(instance_group_2)
 
               expect(parsed_deployment.instance_group('instance-group-1-name')).to eq(instance_group_1)
               expect(parsed_deployment.instance_group('instance-group-2-name')).to eq(instance_group_2)
@@ -416,39 +413,37 @@ module Bosh::Director
           context 'when more than one instance group have the same canonical name' do
             before do
               manifest_hash.merge!('instance_groups' => [
-                { 'name' => 'instance-group-1-name' },
-                { 'name' => 'instance-group-2-name' },
-              ])
+                                     { 'name' => 'instance-group-1-name' },
+                                     { 'name' => 'instance-group-2-name' },
+                                   ])
             end
 
             let(:instance_group_1) do
-              instance_double('Bosh::Director::DeploymentPlan::InstanceGroup', {
-                name: 'instance-group-1-name',
-                vm_type: 'default',
-                canonical_name: 'same-canonical-name',
-              })
+              instance_double('Bosh::Director::DeploymentPlan::InstanceGroup',
+                              name: 'instance-group-1-name',
+                              vm_type: 'default',
+                              canonical_name: 'same-canonical-name')
             end
 
             let(:instance_group_2) do
-              instance_double('Bosh::Director::DeploymentPlan::InstanceGroup', {
-                name: 'instance-group-2-name',
-                vm_type: 'default',
-                canonical_name: 'same-canonical-name',
-              })
+              instance_double('Bosh::Director::DeploymentPlan::InstanceGroup',
+                              name: 'instance-group-2-name',
+                              vm_type: 'default',
+                              canonical_name: 'same-canonical-name')
             end
 
             it 'raises an error' do
-              allow(DeploymentPlan::InstanceGroup).to receive(:parse).
-                with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-1-name'}, event_log, logger, {'is_deploy_action' => true}).
-                and_return(instance_group_1)
+              allow(DeploymentPlan::InstanceGroup).to receive(:parse)
+                .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-1-name' }, event_log, logger, 'is_deploy_action' => true)
+                .and_return(instance_group_1)
 
-              allow(DeploymentPlan::InstanceGroup).to receive(:parse).
-                with(be_a(DeploymentPlan::Planner), {'name' => 'instance-group-2-name'}, event_log, logger, {'is_deploy_action' => true}).
-                and_return(instance_group_2)
+              allow(DeploymentPlan::InstanceGroup).to receive(:parse)
+                .with(be_a(DeploymentPlan::Planner), { 'name' => 'instance-group-2-name' }, event_log, logger, 'is_deploy_action' => true)
+                .and_return(instance_group_2)
 
-              expect {
+              expect do
                 parsed_deployment
-              }.to raise_error(
+              end.to raise_error(
                 DeploymentCanonicalJobNameTaken,
                 "Invalid instance group name 'instance-group-2-name', canonical name already taken",
               )
@@ -475,8 +470,8 @@ module Bosh::Director
         context 'when there is a jobs key' do
           before do
             manifest_hash.merge!('jobs' => [
-                                     { 'name' => 'instance-group-1-name' },
-                                     { 'name' => 'instance-group-2-name' },
+                                   { 'name' => 'instance-group-1-name' },
+                                   { 'name' => 'instance-group-2-name' },
                                  ])
           end
 
@@ -489,14 +484,14 @@ module Bosh::Director
       describe 'variables key' do
         context 'when variables spec is valid' do
           it 'parses provided variables' do
-            variables_spec = [{'name' => 'var_a', 'type' => 'a'}, {'name' => 'var_b', 'type' => 'b', 'options' => {'x' => 2}}]
-            manifest_hash.merge!('variables' => variables_spec)
+            variables_spec = [{ 'name' => 'var_a', 'type' => 'a' }, { 'name' => 'var_b', 'type' => 'b', 'options' => { 'x' => 2 } }]
+            manifest_hash['variables'] = variables_spec
 
             result_obj = parsed_deployment.variables
 
             expect(result_obj.spec.count).to eq(2)
-            expect(result_obj.get_variable('var_a')).to eq({'name' => 'var_a', 'type' => 'a'})
-            expect(result_obj.get_variable('var_b')).to eq({'name' => 'var_b', 'type' => 'b', 'options' => {'x' => 2}})
+            expect(result_obj.get_variable('var_a')).to eq('name' => 'var_a', 'type' => 'a')
+            expect(result_obj.get_variable('var_b')).to eq('name' => 'var_b', 'type' => 'b', 'options' => { 'x' => 2 })
           end
 
           it 'allows to not include variables key' do
@@ -508,10 +503,10 @@ module Bosh::Director
 
         context 'when variables spec is NOT valid' do
           it 'throws an error' do
-            variables_spec = [{'name' => 'var_a', 'value' => 'a'}]
-            manifest_hash.merge!('variables' => variables_spec)
+            variables_spec = [{ 'name' => 'var_a', 'value' => 'a' }]
+            manifest_hash['variables'] = variables_spec
 
-            expect{ parsed_deployment.variables }.to raise_error Bosh::Director::VariablesInvalidFormat
+            expect { parsed_deployment.variables }.to raise_error Bosh::Director::VariablesInvalidFormat
           end
         end
       end
@@ -519,8 +514,8 @@ module Bosh::Director
       describe 'features key' do
         context 'when features spec is valid' do
           it 'parses provided features' do
-            features_spec = {'use_dns_addresses' => true}
-            manifest_hash.merge!('features' => features_spec)
+            features_spec = { 'use_dns_addresses' => true }
+            manifest_hash['features'] = features_spec
 
             features_obj = parsed_deployment.features
             expect(features_obj.use_dns_addresses).to eq(true)
@@ -529,10 +524,10 @@ module Bosh::Director
 
         context 'when features spec is NOT valid' do
           it 'throws an error' do
-            features_spec = {'use_dns_addresses' => 6}
-            manifest_hash.merge!('features' => features_spec)
+            features_spec = { 'use_dns_addresses' => 6 }
+            manifest_hash['features'] = features_spec
 
-            expect{ parsed_deployment.features }.to raise_error Bosh::Director::FeaturesInvalidFormat
+            expect { parsed_deployment.features }.to raise_error Bosh::Director::FeaturesInvalidFormat
           end
         end
 
@@ -548,21 +543,21 @@ module Bosh::Director
         context 'when addon spec is valid' do
           it 'parses provided addons' do
             addon_spec = [
-                {
-                  'name' => 'addon1',
-                  'jobs' => [{'name' => 'dummy_with_properties', 'release' => 'dummy2'}, {'name' => 'dummy_with_package', 'release' => 'dummy2'}],
-                  'properties' => {'dummy_with_properties' => {'echo_value' => 'addon_prop_value'}}
-                }
+              {
+                'name' => 'addon1',
+                'jobs' => [{ 'name' => 'dummy_with_properties', 'release' => 'dummy2' }, { 'name' => 'dummy_with_package', 'release' => 'dummy2' }],
+                'properties' => { 'dummy_with_properties' => { 'echo_value' => 'addon_prop_value' } },
+              },
             ]
-            manifest_hash.merge!('releases' => [{'name' => 'dummy2', 'version' => '2'}]).merge!('addons' => addon_spec)
+            manifest_hash.merge!('releases' => [{ 'name' => 'dummy2', 'version' => '2' }])['addons'] = addon_spec
 
             result_obj = parsed_deployment.addons
 
             expect(result_obj.count).to eq(1)
             expect(result_obj.first.name).to eq('addon1')
-            expect(result_obj.first.jobs).to eq([{'name' => 'dummy_with_properties', 'release' => 'dummy2', 'provides' => {}, 'consumes' => {}, 'properties' => nil},
-              {'name' => 'dummy_with_package', 'release' => 'dummy2', 'provides' => {}, 'consumes' => {}, 'properties' => nil}])
-            expect(result_obj.first.properties).to eq({'dummy_with_properties' => {'echo_value' => 'addon_prop_value'}})
+            expect(result_obj.first.jobs).to eq([{ 'name' => 'dummy_with_properties', 'release' => 'dummy2', 'provides' => {}, 'consumes' => {}, 'properties' => nil },
+                                                 { 'name' => 'dummy_with_package', 'release' => 'dummy2', 'provides' => {}, 'consumes' => {}, 'properties' => nil }])
+            expect(result_obj.first.properties).to eq('dummy_with_properties' => { 'echo_value' => 'addon_prop_value' })
           end
 
           it 'allows to not include addons' do
@@ -577,14 +572,14 @@ module Bosh::Director
             addon_spec = [
               {
                 'name' => 'addon1',
-                'jobs' => [{'name' => 'dummy_with_properties', 'release' => 'dummy2'}, {'name' => 'dummy_with_package', 'release' => 'dummy2'}],
-                'properties' => {'dummy_with_properties' => {'echo_value' => 'addon_prop_value'}},
-                'include' => {'deployments' => ['dep1']},
-              }
+                'jobs' => [{ 'name' => 'dummy_with_properties', 'release' => 'dummy2' }, { 'name' => 'dummy_with_package', 'release' => 'dummy2' }],
+                'properties' => { 'dummy_with_properties' => { 'echo_value' => 'addon_prop_value' } },
+                'include' => { 'deployments' => ['dep1'] },
+              },
             ]
-            manifest_hash.merge!('releases' => [{'name' => 'dummy2', 'version' => '2'}]).merge!('addons' => addon_spec)
+            manifest_hash.merge!('releases' => [{ 'name' => 'dummy2', 'version' => '2' }])['addons'] = addon_spec
 
-            expect{ parsed_deployment.addons }.to raise_error Bosh::Director::AddonDeploymentFilterNotAllowed
+            expect { parsed_deployment.addons }.to raise_error Bosh::Director::AddonDeploymentFilterNotAllowed
           end
         end
       end

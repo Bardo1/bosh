@@ -25,13 +25,14 @@ module Bosh::Director
       private
 
       def parse_networks(instance_group_spec, instance_group_name, manifest_networks)
-        network_specs = safe_property(instance_group_spec, "networks", :class => Array)
+        network_specs = safe_property(instance_group_spec, 'networks', class: Array)
         if network_specs.empty?
           raise JobMissingNetwork, "Instance group '#{instance_group_name}' must specify at least one network"
         end
+
         network_specs.map do |network_spec|
-          network_name = safe_property(network_spec, "name", :class => String)
-          default_for = safe_property(network_spec, "default", :class => Array, :default => [])
+          network_name = safe_property(network_spec, 'name', class: String)
+          default_for = safe_property(network_spec, 'default', class: Array, default: [])
           static_ips = parse_static_ips(network_spec['static_ips'], instance_group_name)
 
           deployment_network = look_up_deployment_network(manifest_networks, instance_group_name, network_name)
@@ -42,10 +43,11 @@ module Bosh::Director
       end
 
       def look_up_deployment_network(manifest_networks, instance_group_name, network_name)
-        deployment_network = manifest_networks.find{ |network| network.name == network_name }
+        deployment_network = manifest_networks.find { |network| network.name == network_name }
         if deployment_network.nil?
           raise JobUnknownNetwork, "Instance group '#{instance_group_name}' references an unknown network '#{network_name}'"
         end
+
         deployment_network
       end
 
@@ -55,7 +57,8 @@ module Bosh::Director
           static_ips = []
           each_ip(static_ips_raw) do |ip|
             if static_ips.include?(ip)
-              raise JobInvalidStaticIPs, "Instance group '#{instance_group_name}' specifies static IP '#{format_ip(ip)}' more than once"
+              raise JobInvalidStaticIPs,
+                    "Instance group '#{instance_group_name}' specifies static IP '#{format_ip(ip)}' more than once"
             end
 
             static_ips.push(ip)
@@ -66,11 +69,11 @@ module Bosh::Director
 
       def validate_default_properties(network, instance_group_name)
         network.properties_for_which_the_network_is_the_default.each do |property|
-          unless @valid_properties.include?(property)
-            raise JobNetworkInvalidDefault,
-              "Instance group '#{instance_group_name}' specified an invalid default network property '#{property}', " +
-                "valid properties are: " + @properties_that_require_defaults.join(", ")
-          end
+          next if @valid_properties.include?(property)
+
+          raise JobNetworkInvalidDefault,
+                "Instance group '#{instance_group_name}' specified an invalid default network property '#{property}', " \
+                'valid properties are: ' + @properties_that_require_defaults.join(', ')
         end
       end
 
@@ -83,31 +86,32 @@ module Bosh::Director
       end
 
       def validate_default_network_for_each_property(default_networks_for_properties, instance_group_name)
-        missing_default_properties = default_networks_for_properties.select { |property, networks|
+        missing_default_properties = default_networks_for_properties.select do |property, networks|
           is_required = @properties_that_require_defaults.include?(property)
           is_required && networks.empty?
-        }.map { |property, _|
+        end.map do |property, _|
           property
-        }
-        unless missing_default_properties.empty?
-          raise JobNetworkMissingDefault,
-            "Instance group '#{instance_group_name}' must specify which network is default for " +
-              missing_default_properties.sort.join(", ") + ", since it has more than one network configured"
         end
+        return if missing_default_properties.empty?
+
+        raise JobNetworkMissingDefault,
+              "Instance group '#{instance_group_name}' must specify which network is default for " +
+              missing_default_properties.sort.join(', ') + ', since it has more than one network configured'
       end
 
       def validate_only_one_default_network(default_networks_for_properties, instance_group_name)
-        multiple_defaults = default_networks_for_properties.select { |_, networks|
+        multiple_defaults = default_networks_for_properties.select do |_, networks|
           networks.count > 1
-        }
-        unless multiple_defaults.empty?
-          message_for_each_property = multiple_defaults.map do |property, networks|
-            quoted_network_names = networks.map { |network| "'#{network.name}'" }.join(', ')
-            "'#{property}' has default networks: #{quoted_network_names}."
-          end
-          raise JobNetworkMultipleDefaults,
-            "Instance group '#{instance_group_name}' specified more than one network to contain default. #{message_for_each_property.join(' ')}"
         end
+        return if multiple_defaults.empty?
+
+        message_for_each_property = multiple_defaults.map do |property, networks|
+          quoted_network_names = networks.map { |network| "'#{network.name}'" }.join(', ')
+          "'#{property}' has default networks: #{quoted_network_names}."
+        end
+        raise JobNetworkMultipleDefaults,
+              "Instance group '#{instance_group_name}' specified more than one network to contain default. " +
+              message_for_each_property.join(' ')
       end
 
       def default_networks_for_properties(networks)

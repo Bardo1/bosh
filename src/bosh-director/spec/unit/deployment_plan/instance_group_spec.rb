@@ -328,8 +328,8 @@ describe Bosh::Director::DeploymentPlan::InstanceGroup do
     context 'when the jobs are from different releases' do
       let(:release2) do
         Bosh::Director::DeploymentPlan::ReleaseVersion.parse(deployment,
-                                                           'name' => 'release2',
-                                                           'version' => '1')
+                                                             'name' => 'release2',
+                                                             'version' => '1')
       end
       let(:release2_foo_job) do
         r = Bosh::Director::DeploymentPlan::Job.new(release2, 'foo')
